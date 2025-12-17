@@ -1,10 +1,15 @@
-const TILE_SIZE = 32;
+
  const particles = [];
 // === ЗВУКИ ===
 const sJump = new Audio("sounds/jump.wav");
 const sLand = new Audio("sounds/land.wav");
 const sCoin = new Audio("sounds/coin.wav");
 const sHit = new Audio("sounds/hit.wav");
+function playSound(sound, volume = 1) {
+    const s = sound.cloneNode();
+    s.volume = volume;
+    s.play();
+}
 
 const enemies = [];
 
@@ -16,11 +21,17 @@ sHit.volume = 0.5;
 const abyssCreatures = [];
 let abyssWave = 0;
 
+// ===== КОНСТАНТЫ =====
+const TILE_SIZE = 32;
+const SIDE_DARK = 0.75;
+const BOTTOM_DARK = 0.55;
+
 
 const shadow = {
     scale: 1,
     alpha: 0.5
 };
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -54,9 +65,9 @@ const player = {
     isAttacking: false,
     attackFrame: 0,
     attackCooldown: 0,
-    attackRange: 60,   // дальность удара в пикселях
-    attackDuration: 10, // сколько кадров длится атака
-    attackHitbox: { x: 0, y: 0, w: 60, h: 40 },
+    attackRange: 90,   // дальность удара в пикселях
+    attackDuration: 14, // сколько кадров длится атака
+    attackHitbox: { x: 0, y: 0, w: 90, h: 40 },
 
     speed: 0.4,
     maxSpeed: 6,
@@ -109,7 +120,7 @@ player.attack = function() {
     slash.frame = 0;
 
     slash.flip = this.direction;
-    slash.x = this.x + this.w/2 + this.direction * 40;
+    slash.x = this.x + this.w/2 + this.direction * 65;
     slash.y = this.y + this.h / 2;
 };
 player.takeDamage = function(fromX) {
@@ -124,7 +135,8 @@ player.takeDamage = function(fromX) {
     this.vx = dir * this.knockbackX;
     this.vy = -this.knockbackY;
 
-    sHit.play();
+    playSound(sHit, 0.6);
+
 
     // визуальный squash
     this.scaleX = 1.3;
@@ -393,7 +405,7 @@ if (player.jumpBuffer > 0) {
 
     if (player.coyoteTime > 0) {
         player.vy = -player.jumpForce;
-        sJump.play();
+        playSound(sJump, 0.5);
         player.scaleY = 1.2;
 player.scaleX = 0.8;
 
@@ -487,6 +499,10 @@ if (player.onGround && !player.wasOnGround) {
         player.vy = 0;
         player.onGround = true;
     }
+    if (player.onGround && !player.wasOnGround) {
+    playSound(sLand, 0.4);
+}
+
     player.wasOnGround = player.onGround;
     // Плавное возвращение формы
 player.scaleX += (1 - player.scaleX) * 0.2;
@@ -661,7 +677,6 @@ function drawPlatforms() {
     if (!tileGround.complete || tileGround.naturalWidth === 0) return;
 
     ctx.save();
-    ctx.globalAlpha = 1;  // Убираем прозрачность, если она есть
 
     for (let p of platforms) {
         const tilesX = Math.ceil(p.w / TILE_SIZE);
@@ -669,6 +684,25 @@ function drawPlatforms() {
 
         for (let y = 0; y < tilesY; y++) {
             for (let x = 0; x < tilesX; x++) {
+
+                let alpha = 1;
+
+                // затемняем ТОЛЬКО если есть глубина
+                if (tilesY > 1) {
+
+                    // боковые края
+                    if (x === 0 || x === tilesX - 1) {
+                        alpha = SIDE_DARK;
+                    }
+
+                    // нижний ряд
+                    if (y === tilesY - 1) {
+                        alpha = BOTTOM_DARK;
+                    }
+                }
+
+                ctx.globalAlpha = alpha;
+
                 ctx.drawImage(
                     tileGround,
                     p.x + x * TILE_SIZE - camera.x,
@@ -680,8 +714,10 @@ function drawPlatforms() {
         }
     }
 
-    ctx.restore();  // Восстановление альфы
+    ctx.restore();
 }
+
+
 
 
 
